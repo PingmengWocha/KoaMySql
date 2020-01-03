@@ -10,6 +10,10 @@ const passport = require("koa-passport");
 //引入bcryptjs 用于加解密密码
 const bcrypt = require('bcryptjs');
 
+//引入验证
+const validateRegisterInput = require("../../validation/register");
+const validateLoginInput = require("../../validation/login");
+
 /**
  * @router GET api/users/test
  * @desc 测试接口
@@ -26,11 +30,20 @@ router.get("/test",async ctx => {
  * @access 公开的接口
  */
 router.post("/login",async ctx => {
+
+  //将前端传入的数据进行验证
+  const { errors, isValid } = validateLoginInput(ctx.request.body);
+  //判断是否验证通过
+  if (!isValid){
+    ctx.status = 404;
+    ctx.body = errors;
+    return;
+  }
+
   let data = {
     email: ctx.request.body.email,
     password: ctx.request.body.password
-  }
-  if (!data.email || !data.password) return
+  };
 
   // console.log(`select * from user where email = '${data.email}' and password = '${data.password}'`)
   //查询数据库
@@ -43,7 +56,7 @@ router.post("/login",async ctx => {
     });
   if (findResult.length == 0){
     ctx.status = 404;
-    ctx.body = { error: "用户名不存在" }
+    ctx.body = { error: "用户不存在" }
   } else {
     //匹配密码
     let user = findResult[0];
@@ -76,6 +89,14 @@ router.post("/login",async ctx => {
  * @access 公开的接口
  */
 router.post("/register",async ctx => {
+
+  const { errors, isValid } = validateRegisterInput(ctx.request.body);
+  if (!isValid){
+    ctx.status = 404;
+    ctx.body = errors;
+    return;
+  }
+
   let data = {
     name: ctx.request.body.name,
     email: ctx.request.body.email,
@@ -83,7 +104,6 @@ router.post("/register",async ctx => {
     password: ctx.request.body.password,
   }
   //首先查询数据库中是否已经存在数据
-
   const findResult = await SQL.query(`select * from user where email = '${data.email}'`)
     .then(res => {
       return res
